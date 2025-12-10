@@ -90,7 +90,7 @@ def main():
                             형식은 '개조식'으로 간결하게 작성하세요.
                             """
                             
-                            model = genai.GenerativeModel("gemini-1.5-flash")
+                            model = genai.GenerativeModel("gemini-2.5-flash")
                             result = model.generate_content([myfile, prompt])
                             
                             st.session_state['soap_result'] = result.text
@@ -111,3 +111,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
