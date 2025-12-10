@@ -118,7 +118,7 @@ def main():
                             침 치료 및 중성어혈 약침 시술함. 3일간 무거운 물건 들지 말 것 지도.
                             """
                             
-                            model = genai.GenerativeModel("gemini-1.5-flash")
+                            model = genai.GenerativeModel("gemini-2.5-flash")
                             result = model.generate_content([myfile, prompt])
                             
                             st.session_state['soap_result'] = result.text
@@ -139,3 +139,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
