@@ -46,11 +46,14 @@ def main():
         st.subheader("1. 진료 내용 녹음")
         st.write("아래 마이크 아이콘을 클릭하세요.")
         
+        # 침묵 감지 시간을 60초(1분)로 늘려서 중간에 끊기지 않게 설정
         audio_bytes = audio_recorder(
             text="클릭하여 녹음 시작/종료",
             recording_color="#e8b62c",
             neutral_color="#6aa36f",
             icon_size="3x",
+            pause_threshold=60.0,  # [중요] 60초 동안 말이 없어야 꺼짐 (사실상 자동종료 해제)
+            sample_rate=44100      # 음질 설정
         )
         
         if audio_bytes:
@@ -139,4 +142,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
