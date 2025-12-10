@@ -19,11 +19,23 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 사이드바 ---
+# --- 사이드바: API 키 처리 (자동/수동) ---
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3063/3063822.png", width=100)
     st.title("JSH-VoiceChart")
-    api_key = st.text_input("Gemini API Key", type="password")
+    
+    # [핵심 변경 사항] Secrets에서 키를 찾고, 없으면 입력창을 띄움
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            api_key = st.secrets["GEMINI_API_KEY"]
+            st.success("✅ API Key가 자동 연동되었습니다.")
+        else:
+            # secrets에 키가 없으면 수동 입력창 표시
+            api_key = st.text_input("Gemini API Key", type="password")
+    except FileNotFoundError:
+        # 로컬 실행 시 secrets 파일이 없으면 수동 입력창 표시
+        api_key = st.text_input("Gemini API Key", type="password")
+
     st.info("💡 녹음 버튼을 누르면 녹음이 시작되고, 다시 누르면 종료됩니다.")
 
 # --- 메인 함수 ---
@@ -37,7 +49,7 @@ def main():
         st.subheader("1. 진료 내용 녹음")
         st.write("아래 마이크 아이콘을 클릭하세요.")
         
-        # 새로운 녹음기 (설치 쉬운 버전)
+        # 녹음기
         audio_bytes = audio_recorder(
             text="클릭하여 녹음 시작/종료",
             recording_color="#e8b62c",
@@ -49,9 +61,9 @@ def main():
             st.audio(audio_bytes, format="audio/wav")
             
             if not api_key:
-                st.error("⚠️ 사이드바에 API Key를 넣어주세요.")
+                st.error("⚠️ API Key가 없습니다. 사이드바에 입력하거나 Secrets를 설정하세요.")
             else:
-                st.success("녹음이 완료되었습니다!")
+                st.success("녹음 완료! 변환 준비 끝.")
                 
                 if st.button("📝 S.O.A.P. 차트 변환하기", type="primary"):
                     with st.spinner("AI가 분석 중입니다..."):
@@ -65,7 +77,7 @@ def main():
                             genai.configure(api_key=api_key)
                             myfile = genai.upload_file(tmp_file_path)
                             
-                            # 프롬프트 (한의원 로직)
+                            # 프롬프트
                             prompt = """
                             당신은 한의학 진료 기록 전문 AI입니다. 
                             이 오디오를 듣고 EMR에 입력할 S.O.A.P. 차트를 작성하세요.
