@@ -19,24 +19,21 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 사이드바: API 키 처리 (자동/수동) ---
+# --- 사이드바: API 키 처리 ---
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3063/3063822.png", width=100)
     st.title("JSH-VoiceChart")
     
-    # [핵심 변경 사항] Secrets에서 키를 찾고, 없으면 입력창을 띄움
     try:
         if "GEMINI_API_KEY" in st.secrets:
             api_key = st.secrets["GEMINI_API_KEY"]
-            st.success("✅ API Key가 자동 연동되었습니다.")
+            st.success("✅ API Key 연동됨")
         else:
-            # secrets에 키가 없으면 수동 입력창 표시
             api_key = st.text_input("Gemini API Key", type="password")
     except FileNotFoundError:
-        # 로컬 실행 시 secrets 파일이 없으면 수동 입력창 표시
         api_key = st.text_input("Gemini API Key", type="password")
 
-    st.info("💡 녹음 버튼을 누르면 녹음이 시작되고, 다시 누르면 종료됩니다.")
+    st.info("💡 녹음 버튼을 누르면 녹음 시작/종료")
 
 # --- 메인 함수 ---
 def main():
@@ -49,7 +46,6 @@ def main():
         st.subheader("1. 진료 내용 녹음")
         st.write("아래 마이크 아이콘을 클릭하세요.")
         
-        # 녹음기
         audio_bytes = audio_recorder(
             text="클릭하여 녹음 시작/종료",
             recording_color="#e8b62c",
@@ -61,12 +57,12 @@ def main():
             st.audio(audio_bytes, format="audio/wav")
             
             if not api_key:
-                st.error("⚠️ API Key가 없습니다. 사이드바에 입력하거나 Secrets를 설정하세요.")
+                st.error("⚠️ API Key가 없습니다.")
             else:
                 st.success("녹음 완료! 변환 준비 끝.")
                 
                 if st.button("📝 S.O.A.P. 차트 변환하기", type="primary"):
-                    with st.spinner("AI가 분석 중입니다..."):
+                    with st.spinner("AI가 양식에 맞춰 정리 중입니다..."):
                         try:
                             # 임시 파일 저장
                             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
@@ -77,26 +73,56 @@ def main():
                             genai.configure(api_key=api_key)
                             myfile = genai.upload_file(tmp_file_path)
                             
-                            # 프롬프트
+                            # ★ 핵심 수정: 프롬프트 (양식 변경) ★
                             prompt = """
                             당신은 한의학 진료 기록 전문 AI입니다. 
-                            이 오디오를 듣고 EMR에 입력할 S.O.A.P. 차트를 작성하세요.
+                            제공된 진료 대화(오디오)를 듣고 아래의 엄격한 규칙에 따라 차트를 작성하세요.
+
+                            [작성 규칙]
                             
-                            1. S: 환자의 주관적 증상, 발병일, VAS
-                            2. O: 이학적 검사 소견, 맥진/설진, 의사의 구두 요약 정보
-                            3. A: 한의학적 변증 및 진단명
-                            4. P: 치료 계획 (침구, 약침, 한약, 지도사항)
-                            5. PI : 현재 복용 중인 약물
-                            6. P/H : 과거력, 수술이력
-                            
-                            형식은 '개조식'으로 간결하게 작성하세요.
+                            1. S (Subjective):
+                               - 환자가 호소하는 주소증을 하나씩 나열하세요.
+                               - 형식:
+                                 # [주소증 내용]
+                                 o/s [발병시기]
+                               - (증상이 여러 개면 위 형식을 반복하세요.)
+
+                            2. O (Objective):
+                               - 오직 **의사가 구두로 명확하게 언급한 관찰 소견**만 적으세요.
+                               - (예: "맥이 빠르네요", "여기를 누르니 아프시군요", "SLR 30도 양성입니다")
+                               - 의사가 언급한 내용이 없다면 **절대 추측하여 적지 말고 빈칸으로 두세요.**
+
+                            3. A (Assessment):
+                               - 오직 **의사가 구두로 명확하게 언급한 진단명(변증)**만 적으세요.
+                               - (예: "요추 염좌입니다", "신허증으로 보입니다")
+                               - 의사가 언급한 내용이 없다면 빈칸으로 두세요.
+
+                            4. P (Plan):
+                               - 의사가 환자에게 설명한 **전체적인 치료 계획**을 요약해서 적으세요.
+                               - (침, 약침, 한약, 생활 지도 등)
+
+                            [출력 예시]
+                            S
+                            # 허리가 쑤시고 굽히기 힘듦
+                            o/s 3일 전
+                            # 우측 발목 통증
+                            o/s 오늘 아침
+
+                            O
+                            L-spine ROM 제한, SLR Test (+)
+
+                            A
+                            요추 염좌 (Acute Lumbar Sprain)
+
+                            P
+                            침 치료 및 중성어혈 약침 시술함. 3일간 무거운 물건 들지 말 것 지도.
                             """
                             
-                            model = genai.GenerativeModel("gemini-2.5-flash")
+                            model = genai.GenerativeModel("gemini-1.5-flash")
                             result = model.generate_content([myfile, prompt])
                             
                             st.session_state['soap_result'] = result.text
-                            os.remove(tmp_file_path) # 파일 삭제
+                            os.remove(tmp_file_path)
 
                         except Exception as e:
                             st.error(f"에러 발생: {e}")
@@ -113,5 +139,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
