@@ -46,14 +46,14 @@ def main():
         st.subheader("1. 진료 내용 녹음")
         st.write("아래 마이크 아이콘을 클릭하세요.")
         
-        # 침묵 감지 시간을 60초(1분)로 늘려서 중간에 끊기지 않게 설정
+        # 60초 침묵 허용 (끊김 방지)
         audio_bytes = audio_recorder(
             text="클릭하여 녹음 시작/종료",
             recording_color="#e8b62c",
             neutral_color="#6aa36f",
             icon_size="3x",
-            pause_threshold=60.0,  # [중요] 60초 동안 말이 없어야 꺼짐 (사실상 자동종료 해제)
-            sample_rate=44100      # 음질 설정
+            pause_threshold=60.0,
+            sample_rate=44100
         )
         
         if audio_bytes:
@@ -65,7 +65,7 @@ def main():
                 st.success("녹음 완료! 변환 준비 끝.")
                 
                 if st.button("📝 S.O.A.P. 차트 변환하기", type="primary"):
-                    with st.spinner("AI가 양식에 맞춰 정리 중입니다..."):
+                    with st.spinner("과거력과 경과를 포함하여 꼼꼼히 기록 중입니다..."):
                         try:
                             # 임시 파일 저장
                             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
@@ -76,53 +76,67 @@ def main():
                             genai.configure(api_key=api_key)
                             myfile = genai.upload_file(tmp_file_path)
                             
-                            # ★ 핵심 수정: 프롬프트 (양식 변경) ★
+                            # ★ 핵심 수정: P/H와 P.I를 강제로 추출하도록 지시 ★
                             prompt = """
-                            당신은 한의학 진료 기록 전문 AI입니다. 
-                            제공된 진료 대화(오디오)를 듣고 아래의 엄격한 규칙에 따라 차트를 작성하세요.
+                            당신은 꼼꼼한 '한의학 진료 기록 전문 AI'입니다. 
+                            제공된 진료 대화를 분석하여 아래 규칙에 따라 S.O.A.P. 차트를 작성하세요.
+                            대화 속에 숨어있는 과거력(P/H)과 현병력(P.I)을 절대 놓치지 말고 찾아내세요.
 
                             [작성 규칙]
                             
                             1. S (Subjective):
-                               - 환자가 호소하는 주소증을 하나씩 나열하세요.
-                               - 형식:
-                                 # [주소증 내용]
-                                 o/s [발병시기]
-                                 경과
-                               - (증상이 여러 개면 위 형식을 반복하세요.)
+                               - 환자의 주소증(CC)을 아래 형식으로 적고, 그 밑에 P/H와 P.I를 반드시 포함하세요.
+                               
+                               [형식]
+                               # [주소증 내용]
+                               o/s [발병시기]
+                               (주소증이 여러 개면 반복)
+
+                               [P/H (과거력)]
+                               - 환자나 의사가 언급한 과거 질환, 수술 이력, 복용 약물, 기저 질환(당뇨/혈압 등)
+                               - 언급이 없으면 '특이사항 없음'
+
+                               [P.I (현병력/경과)]
+                               - 증상의 변화 양상 (점점 심해짐, 호전 중임 등)
+                               - 악화/완화 요인 (밤에 더 아픔, 움직이면 아픔 등)
+                               - 타 병원 치료력 (물리치료 받음, 약 먹음 등)
 
                             2. O (Objective):
-                               - 오직 **의사가 구두로 명확하게 언급한 관찰 소견**만 적으세요.
-                               - (예: "맥이 빠르네요", "여기를 누르니 아프시군요", "SLR 30도 양성입니다")
-                               - 의사가 언급한 내용이 없다면 **절대 추측하여 적지 말고 빈칸으로 두세요.**
+                               - **의사가 구두로 명확하게 언급한** 관찰 소견만 적으세요. (맥진, 설진, 이학적 검사 등)
+                               - 의사의 언급이 없으면 빈칸으로 두세요.
 
                             3. A (Assessment):
-                               - 오직 **의사가 구두로 명확하게 언급한 진단명(변증)**만 적으세요.
-                               - (예: "요추 염좌입니다", "신허증으로 보입니다")
-                               - 의사가 언급한 내용이 없다면 빈칸으로 두세요.
+                               - **의사가 구두로 명확하게 언급한** 진단명이나 변증만 적으세요.
+                               - 의사의 언급이 없으면 빈칸으로 두세요.
 
                             4. P (Plan):
-                               - 의사가 환자에게 설명한 **전체적인 치료 계획**을 요약해서 적으세요.
-                               - (침, 약침, 한약, 생활 지도 등)
+                               - 의사가 설명한 향후 치료 계획(침, 뜸, 부항, 한약, 티칭 등)을 요약하세요.
 
                             [출력 예시]
                             S
-                            # 허리가 쑤시고 굽히기 힘듦
+                            # 우측 요통 및 둔부 방사통
                             o/s 3일 전
-                            # 우측 발목 통증
-                            o/s 오늘 아침
+
+                            [P/H]
+                            - 10년 전 L4-5 디스크 수술 이력
+                            - 고혈압 약 복용 중
+
+                            [P.I]
+                            - 무거운 물건 든 후 발생
+                            - 아침에 세수할 때 통증 심화
+                            - 어제 정형외과에서 주사 맞았으나 호전 없음
 
                             O
-                            L-spine ROM 제한, SLR Test (+)
+                            SLR Test 30도 (+), 요추 4번 압통 (+)
 
                             A
-                            요추 염좌 (Acute Lumbar Sprain)
+                            요추 염좌 및 디스크 재발 의증
 
                             P
-                            침 치료 및 중성어혈 약침 시술함. 3일간 무거운 물건 들지 말 것 지도.
+                            침 치료 및 약침 시술. 3일간 절대 안정 지도.
                             """
                             
-                            model = genai.GenerativeModel("gemini-2.5-flash")
+                            model = genai.GenerativeModel("gemini-1.5-flash")
                             result = model.generate_content([myfile, prompt])
                             
                             st.session_state['soap_result'] = result.text
@@ -135,7 +149,7 @@ def main():
     with col2:
         st.subheader("2. 생성된 차트")
         if 'soap_result' in st.session_state:
-            st.text_area("결과 확인", value=st.session_state['soap_result'], height=500)
+            st.text_area("결과 확인", value=st.session_state['soap_result'], height=600)
             st.info("복사해서 EMR에 붙여넣으세요.")
             if st.button("🔄 초기화"):
                 del st.session_state['soap_result']
@@ -143,6 +157,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
