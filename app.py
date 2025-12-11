@@ -128,7 +128,7 @@ def main():
                             3. MOT, P/I 등에서 정보가 부족하면 해당 번호는 생략해도 됩니다.
                             """
                             
-                            model = genai.GenerativeModel("gemini-1.5-flash")
+                            model = genai.GenerativeModel("gemini-2.5-flash")
                             result = model.generate_content([myfile, prompt])
                             
                             st.session_state['soap_result'] = result.text
@@ -149,3 +149,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
