@@ -6,14 +6,13 @@ import tempfile
 from PIL import Image
 
 # --- 1. 페이지 설정 ---
-# page_icon에 이미지 파일 경로를 넣으면 브라우저 탭 아이콘이 바뀝니다.
 st.set_page_config(
     page_title="제세현한의원 AI Chart",
-    page_icon="png.log.png",  # [수정] 업로드한 로고 파일명 적용
+    page_icon="png.log.png", 
     layout="wide"
 )
 
-# --- 2. 제세현한의원 브랜드 컬러 & 스타일 CSS ---
+# --- 2. CSS 스타일 (버튼 글씨 색상 수정됨) ---
 st.markdown("""
     <style>
     /* 전체 배경색 */
@@ -21,12 +20,19 @@ st.markdown("""
         background-color: #F7F5E6;
     }
     
-    /* 헤더 배경색 일치 */
+    /* 상단 여백 최소화 */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 2rem;
+        max_width: 1200px;
+    }
+    
+    /* 헤더 배경색 */
     header[data-testid="stHeader"] {
         background-color: #F7F5E6;
     }
 
-    /* 폰트 스타일 (진녹색) */
+    /* 폰트 스타일 */
     h1, h2, h3 {
         font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
         font-weight: 700;
@@ -46,10 +52,10 @@ st.markdown("""
         border: 1px solid #E0E8E0;
     }
 
-    /* 버튼 스타일 */
+    /* ★★★ 버튼 스타일 수정 (글씨 흰색 강제 적용) ★★★ */
     .stButton > button {
-        background-color: #1F4E35;
-        color: white;
+        background-color: #1F4E35 !important; /* 배경: 진녹색 */
+        color: #FFFFFF !important;            /* 글씨: 흰색 (강제) */
         border: none;
         border-radius: 8px;
         padding: 12px 24px;
@@ -58,8 +64,12 @@ st.markdown("""
         width: 100%;
     }
     .stButton > button:hover {
-        background-color: #143323;
+        background-color: #143323 !important; /* 마우스 올렸을 때 더 진한 녹색 */
+        color: #FFFFFF !important;            /* 마우스 올려도 글씨는 흰색 유지 */
         box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+    }
+    .stButton > button:active {
+        color: #FFFFFF !important;
     }
     
     /* 텍스트 입력창 스타일 */
@@ -86,12 +96,10 @@ st.markdown("""
 
 # --- 3. 사이드바 (로고 및 설정) ---
 with st.sidebar:
-    # [수정] 업로드한 파일명으로 변경
     logo_filename = "png.log.png" 
     
     if os.path.exists(logo_filename):
         image = Image.open(logo_filename)
-        # 로고 표시 (너비 조절 가능)
         st.image(image, width=200) 
     else:
         st.markdown("### 🌿 제세현한의원", unsafe_allow_html=True)
@@ -101,7 +109,6 @@ with st.sidebar:
     st.caption("진료 기록 어시스턴트 System")
     st.markdown("---", unsafe_allow_html=True)
     
-    # API 키 처리
     try:
         if "GEMINI_API_KEY" in st.secrets:
             api_key = st.secrets["GEMINI_API_KEY"]
@@ -209,7 +216,7 @@ def main():
                             [주의] 내용은 개조식으로 작성. S 내부 항목 줄바꿈 필수.
                             """
                             
-                            model = genai.GenerativeModel("gemini-2.5-flash")
+                            model = genai.GenerativeModel("gemini-1.5-flash")
                             result = model.generate_content([myfile, prompt])
                             
                             st.session_state['soap_result'] = result.text
@@ -243,5 +250,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
