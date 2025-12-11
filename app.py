@@ -12,12 +12,19 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. CSS 스타일 (버튼 글씨 색상 수정됨) ---
+# --- 2. CSS 스타일 (버튼 글씨 강제 적용 강화) ---
 st.markdown("""
     <style>
     /* 전체 배경색 */
     .stApp {
         background-color: #F7F5E6;
+    }
+    
+    /* 상단 여백 최소화 */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 2rem;
+        max_width: 1200px;
     }
     
     /* 헤더 배경색 */
@@ -45,23 +52,36 @@ st.markdown("""
         border: 1px solid #E0E8E0;
     }
 
-    /* ★★★ 버튼 스타일 수정 (글씨 흰색 강제 적용) ★★★ */
+    /* ★★★ 버튼 스타일 강력 수정 ★★★ */
+    /* 1. 버튼 자체의 스타일 */
     .stButton > button {
-        background-color: #1F4E35 !important; /* 배경: 진녹색 */
-        color: #FFFFFF !important;            /* 글씨: 흰색 (강제) */
+        background-color: #1F4E35 !important;
         border: none;
         border-radius: 8px;
         padding: 12px 24px;
-        font-weight: 600;
         transition: all 0.3s ease;
         width: 100%;
     }
+    
+    /* 2. 버튼 '안'에 있는 모든 텍스트 요소(p태그)를 흰색으로 강제 */
+    .stButton > button p {
+        color: #FFFFFF !important;
+        font-weight: 600 !important;
+    }
+    
+    /* 3. 버튼 자체의 글씨 색상도 혹시 모르니 흰색으로 */
+    .stButton > button {
+        color: #FFFFFF !important;
+    }
+
+    /* 4. 마우스 올렸을 때(Hover) 스타일 */
     .stButton > button:hover {
-        background-color: #143323 !important; /* 마우스 올렸을 때 더 진한 녹색 */
-        color: #FFFFFF !important;            /* 마우스 올려도 글씨는 흰색 유지 */
+        background-color: #143323 !important; /* 더 진한 녹색 */
         box-shadow: 0 4px 6px rgba(0,0,0,0.15);
     }
-    .stButton > button:active {
+    
+    /* 5. 마우스 올렸을 때 글씨 색상 유지 */
+    .stButton > button:hover p {
         color: #FFFFFF !important;
     }
     
@@ -243,5 +263,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
