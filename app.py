@@ -15,7 +15,7 @@ st.set_page_config(
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
-    .stTextArea textarea { font-size: 16px !important; line-height: 1.5 !important; }
+    .stTextArea textarea { font-size: 16px !important; line-height: 1.5 !important; font-family: 'Consolas', 'Courier New', monospace; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -33,7 +33,7 @@ with st.sidebar:
     except FileNotFoundError:
         api_key = st.text_input("Gemini API Key", type="password")
 
-    st.info("💡 녹음 버튼을 누르면 녹음 시작/종료")
+    st.info("💡 60초간 말이 없으면 녹음이 자동 종료됩니다.")
 
 # --- 메인 함수 ---
 def main():
@@ -46,7 +46,7 @@ def main():
         st.subheader("1. 진료 내용 녹음")
         st.write("아래 마이크 아이콘을 클릭하세요.")
         
-        # 60초 침묵 허용 (끊김 방지)
+        # 60초 침묵 허용
         audio_bytes = audio_recorder(
             text="클릭하여 녹음 시작/종료",
             recording_color="#e8b62c",
@@ -65,7 +65,7 @@ def main():
                 st.success("녹음 완료! 변환 준비 끝.")
                 
                 if st.button("📝 S.O.A.P. 차트 변환하기", type="primary"):
-                    with st.spinner("과거력과 경과를 포함하여 꼼꼼히 기록 중입니다..."):
+                    with st.spinner("요청하신 정밀 양식(C/C, O/S, MOT, P/I...)으로 변환 중입니다..."):
                         try:
                             # 임시 파일 저장
                             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
@@ -76,64 +76,56 @@ def main():
                             genai.configure(api_key=api_key)
                             myfile = genai.upload_file(tmp_file_path)
                             
-                            # ★ 핵심 수정: P/H와 P.I를 강제로 추출하도록 지시 ★
+                            # ★ 핵심 수정: 원장님의 예시 형식을 그대로 반영한 프롬프트 ★
                             prompt = """
-                            당신은 꼼꼼한 '한의학 진료 기록 전문 AI'입니다. 
-                            제공된 진료 대화를 분석하여 아래 규칙에 따라 S.O.A.P. 차트를 작성하세요.
-                            대화 속에 숨어있는 과거력(P/H)과 현병력(P.I)을 절대 놓치지 말고 찾아내세요.
+                            당신은 '제세현한의원' 전용 진료 차트 작성 AI입니다.
+                            녹음된 진료 대화를 분석하여 아래의 **[출력 양식]**을 엄격하게 준수하여 작성하십시오.
+                            없는 내용을 지어내지 말고, 대화에서 근거를 찾아 채우십시오.
 
-                            [작성 규칙]
+                            [작성 규칙 및 출력 양식]
+
+                            S]
+                            C/C
+                            (환자의 주소증을 번호(#1, #2...)를 매겨 분류하고, 각 증상 밑에 구체적인 양상을 적으세요.)
+                            #1 [주소증1]
+                            [세부 증상 내용]
                             
-                            1. S (Subjective):
-                               - 환자의 주소증(CC)을 아래 형식으로 적고, 그 밑에 P/H와 P.I를 반드시 포함하세요.
-                               
-                               [형식]
-                               # [주소증 내용]
-                               o/s [발병시기]
-                               (주소증이 여러 개면 반복)
+                            #2 [주소증2]
+                            [세부 증상 내용]
 
-                               [P/H (과거력)]
-                               - 환자나 의사가 언급한 과거 질환, 수술 이력, 복용 약물, 기저 질환(당뇨/혈압 등)
-                               - 언급이 없으면 '특이사항 없음'
+                            O/S
+                            (각 주소증 번호(#1, #2...)에 맞춰 발병 시기를 적으세요.)
+                            #1 [시기]
+                            #2 [시기]
 
-                               [P.I (현병력/경과)]
-                               - 증상의 변화 양상 (점점 심해짐, 호전 중임 등)
-                               - 악화/완화 요인 (밤에 더 아픔, 움직이면 아픔 등)
-                               - 타 병원 치료력 (물리치료 받음, 약 먹음 등)
+                            MOT
+                            (Mode of Treatment/Trigger: 증상의 원인, 악화 요인, 직업적 배경, 심리적 배경 등을 적으세요.)
+                            #1 [원인/배경]
+                            #2 [원인/배경]
 
-                            2. O (Objective):
-                               - **의사가 구두로 명확하게 언급한** 관찰 소견만 적으세요. (맥진, 설진, 이학적 검사 등)
-                               - 의사의 언급이 없으면 빈칸으로 두세요.
+                            P/I
+                            (Present Illness: 과거 병력, 타 병원 치료력, 복용 약물, 검사 결과 등을 적으세요.)
+                            #1 [관련 과거력/치료력]
+                            #2 [관련 과거력/치료력]
 
-                            3. A (Assessment):
-                               - **의사가 구두로 명확하게 언급한** 진단명이나 변증만 적으세요.
-                               - 의사의 언급이 없으면 빈칸으로 두세요.
+                            ROS
+                            (Review of Systems: 수면, 소화, 대소변, 한열 등 전신 상태에 대한 문진 내용을 적으세요.)
+                            [항목]: [내용]
 
-                            4. P (Plan):
-                               - 의사가 설명한 향후 치료 계획(침, 뜸, 부항, 한약, 티칭 등)을 요약하세요.
+                            O]
+                            (의사가 구두로 명확히 언급한 이학적 검사 소견이나 관찰 내용만 적으세요. 언급 없으면 공란)
 
-                            [출력 예시]
-                            S
-                            # 우측 요통 및 둔부 방사통
-                            o/s 3일 전
+                            A]
+                            (의사가 구두로 명확히 언급한 진단명/변증만 적으세요. 언급 없으면 공란)
 
-                            [P/H]
-                            - 10년 전 L4-5 디스크 수술 이력
-                            - 고혈압 약 복용 중
+                            P]
+                            (의사가 환자에게 설명한 향후 치료 계획을 적으세요. 침, 약침, 한약 등)
 
-                            [P.I]
-                            - 무거운 물건 든 후 발생
-                            - 아침에 세수할 때 통증 심화
-                            - 어제 정형외과에서 주사 맞았으나 호전 없음
-
-                            O
-                            SLR Test 30도 (+), 요추 4번 압통 (+)
-
-                            A
-                            요추 염좌 및 디스크 재발 의증
-
-                            P
-                            침 치료 및 약침 시술. 3일간 절대 안정 지도.
+                            ---
+                            [작성 시 주의사항]
+                            1. S] 항목 내부의 소제목(C/C, O/S, MOT, P/I, ROS)은 반드시 줄바꿈을 하여 구분하십시오.
+                            2. 내용은 '개조식'으로 간결하게 작성하십시오.
+                            3. MOT, P/I 등에서 정보가 부족하면 해당 번호는 생략해도 됩니다.
                             """
                             
                             model = genai.GenerativeModel("gemini-1.5-flash")
@@ -149,7 +141,7 @@ def main():
     with col2:
         st.subheader("2. 생성된 차트")
         if 'soap_result' in st.session_state:
-            st.text_area("결과 확인", value=st.session_state['soap_result'], height=600)
+            st.text_area("결과 확인", value=st.session_state['soap_result'], height=800)
             st.info("복사해서 EMR에 붙여넣으세요.")
             if st.button("🔄 초기화"):
                 del st.session_state['soap_result']
