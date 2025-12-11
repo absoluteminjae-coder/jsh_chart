@@ -12,12 +12,19 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. CSS 스타일 (버튼 글씨 강제 적용 강화) ---
+# --- 2. CSS 스타일 ---
 st.markdown("""
     <style>
     /* 전체 배경색 */
     .stApp {
         background-color: #F7F5E6;
+    }
+    
+    /* 상단 여백 최소화 */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 2rem;
+        max_width: 1200px;
     }
     
     /* 헤더 배경색 */
@@ -45,8 +52,7 @@ st.markdown("""
         border: 1px solid #E0E8E0;
     }
 
-    /* ★★★ 버튼 스타일 강력 수정 ★★★ */
-    /* 1. 버튼 자체의 스타일 */
+    /* 버튼 스타일 (흰색 글씨 강제) */
     .stButton > button {
         background-color: #1F4E35 !important;
         border: none;
@@ -55,25 +61,17 @@ st.markdown("""
         transition: all 0.3s ease;
         width: 100%;
     }
-    
-    /* 2. 버튼 '안'에 있는 모든 텍스트 요소(p태그)를 흰색으로 강제 */
     .stButton > button p {
         color: #FFFFFF !important;
         font-weight: 600 !important;
     }
-    
-    /* 3. 버튼 자체의 글씨 색상도 혹시 모르니 흰색으로 */
     .stButton > button {
         color: #FFFFFF !important;
     }
-
-    /* 4. 마우스 올렸을 때(Hover) 스타일 */
     .stButton > button:hover {
-        background-color: #143323 !important; /* 더 진한 녹색 */
+        background-color: #143323 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.15);
     }
-    
-    /* 5. 마우스 올렸을 때 글씨 색상 유지 */
     .stButton > button:hover p {
         color: #FFFFFF !important;
     }
@@ -97,10 +95,26 @@ st.markdown("""
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 1rem;
     }
+
+    /* 녹음 상태 안내 텍스트 스타일 */
+    .recording-status {
+        text-align: center;
+        color: #666;
+        font-size: 14px;
+        margin-top: 15px;
+        background-color: #F1F8F1;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #C8E6C9;
+    }
+    .status-highlight {
+        color: #1F4E35;
+        font-weight: bold;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. 사이드바 (로고 및 설정) ---
+# --- 3. 사이드바 ---
 with st.sidebar:
     logo_filename = "png.log.png" 
     
@@ -147,6 +161,7 @@ def main():
         st.subheader("🎙️ 진료 녹음")
         st.markdown("<br>", unsafe_allow_html=True)
         
+        # 녹음기
         audio_bytes = audio_recorder(
             text="", 
             recording_color="#1F4E35", 
@@ -156,10 +171,15 @@ def main():
             sample_rate=44100
         )
         
+        st.markdown("""
+        <div class='recording-status'>
+            👆 아이콘이 <span class='status-highlight'>진한 녹색</span>으로 변하면<br>
+            <b>[ 현재 진료 녹음 중 ]</b> 입니다.
+        </div>
+        """, unsafe_allow_html=True)
+
         if audio_bytes:
-             st.markdown("<p style='text-align: center; color: #1F4E35; font-weight: bold; margin-top: 10px;'>녹음이 완료되었습니다.</p>", unsafe_allow_html=True)
-        else:
-             st.markdown("<p style='text-align: center; color: #8FBC8F; margin-top: 10px;'>아이콘을 클릭하여 녹음을 시작하세요</p>", unsafe_allow_html=True)
+             st.markdown("<p style='text-align: center; color: #1F4E35; font-weight: bold; margin-top: 15px;'>✅ 녹음이 완료되었습니다.</p>", unsafe_allow_html=True)
 
         st.markdown("---", unsafe_allow_html=True)
 
@@ -179,6 +199,7 @@ def main():
                             genai.configure(api_key=api_key)
                             myfile = genai.upload_file(tmp_file_path)
                             
+                            # ★ 프롬프트 수정: 타임스탬프 금지 규칙 추가 ★
                             prompt = """
                             당신은 '제세현한의원' 전용 진료 차트 작성 AI입니다.
                             녹음된 진료 대화를 분석하여 아래의 **[출력 양식]**을 엄격하게 준수하여 작성하십시오.
@@ -219,7 +240,10 @@ def main():
                             (향후 치료 계획 요약)
 
                             ---
-                            [주의] 내용은 개조식으로 작성. S 내부 항목 줄바꿈 필수.
+                            [작성 시 주의사항]
+                            1. S] 항목 내부의 소제목(C/C, O/S...)은 줄바꿈으로 구분하십시오.
+                            2. 내용은 '개조식'으로 간결하게 작성하십시오.
+                            3. **[매우 중요] 발언 시각이나 타임스탬프(예: 0:07, 1:41 등)는 절대 출력하지 마십시오.** 오직 내용만 적으십시오.
                             """
                             
                             model = genai.GenerativeModel("gemini-2.5-flash")
@@ -256,4 +280,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
