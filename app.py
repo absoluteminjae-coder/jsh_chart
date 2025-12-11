@@ -20,13 +20,6 @@ st.markdown("""
         background-color: #F7F5E6;
     }
     
-    /* 상단 여백 최소화 */
-    .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 2rem;
-        max_width: 1200px;
-    }
-    
     /* 헤더 배경색 */
     header[data-testid="stHeader"] {
         background-color: #F7F5E6;
@@ -280,3 +273,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
