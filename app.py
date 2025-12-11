@@ -183,7 +183,7 @@ def main():
                             ... (중략) ...
                             [주의] 내용은 개조식으로 작성. S 내부 항목 줄바꿈 필수.
                             """
-                            model = genai.GenerativeModel("gemini-1.5-flash")
+                            model = genai.GenerativeModel("gemini-2.5-flash")
                             result = model.generate_content([myfile, prompt])
                             st.session_state['soap_result'] = result.text
                             os.remove(tmp_file_path)
@@ -215,3 +215,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
