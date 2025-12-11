@@ -3,40 +3,41 @@ import os
 import google.generativeai as genai
 from audio_recorder_streamlit import audio_recorder
 import tempfile
-from PIL import Image # 이미지를 불러오기 위한 라이브러리
+from PIL import Image
 
 # --- 1. 페이지 설정 ---
+# page_icon에 이미지 파일 경로를 넣으면 브라우저 탭 아이콘이 바뀝니다.
 st.set_page_config(
     page_title="제세현한의원 AI Chart",
-    page_icon="🌿",
+    page_icon="png.log.png",  # [수정] 업로드한 로고 파일명 적용
     layout="wide"
 )
 
-# --- 2. 제세현한의원 브랜드 컬러 & 상단 여백 제거 CSS 적용 ---
+# --- 2. 제세현한의원 브랜드 컬러 & 스타일 CSS ---
 st.markdown("""
     <style>
     /* 전체 배경색 */
     .stApp {
-        background-color: #F7F5E6; /* 크림 베이지 */
+        background-color: #F7F5E6;
     }
     
-    /* 메인 컨테이너 상단 여백 제거 */
+    /* 상단 여백 최소화 */
     .block-container {
-        padding-top: 1rem !important; /* 상단 여백 최소화 */
+        padding-top: 1rem !important;
         padding-bottom: 2rem;
         max_width: 1200px;
     }
     
-    /* 헤더 배경색을 본문과 동일하게 설정하여 흰색 띠 제거 */
+    /* 헤더 배경색 일치 */
     header[data-testid="stHeader"] {
         background-color: #F7F5E6;
     }
 
-    /* 폰트 스타일 */
+    /* 폰트 스타일 (진녹색) */
     h1, h2, h3 {
         font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
         font-weight: 700;
-        color: #1F4E35 !important; /* 진녹색 */
+        color: #1F4E35 !important;
     }
     p, label {
         color: #333333;
@@ -84,25 +85,24 @@ st.markdown("""
         background-color: #EFF2EA;
         border-right: 1px solid #D0D8D0;
     }
-    /* 사이드바 내용 상단 여백 조정 */
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 1rem;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. 사이드바 (로고 및 설정 영역) ---
+# --- 3. 사이드바 (로고 및 설정) ---
 with st.sidebar:
-    # [로고 적용]
-    # 실제 로고 파일(logo.png)을 app.py와 같은 폴더에 넣어주세요.
-    logo_filename = "logo.png" 
+    # [수정] 업로드한 파일명으로 변경
+    logo_filename = "png.log.png" 
+    
     if os.path.exists(logo_filename):
         image = Image.open(logo_filename)
-        # 로고 이미지 표시 (너비 조절 가능)
+        # 로고 표시 (너비 조절 가능)
         st.image(image, width=200) 
     else:
-        # 로고 파일이 없을 경우 텍스트로 대체
         st.markdown("### 🌿 제세현한의원", unsafe_allow_html=True)
+        st.error(f"'{logo_filename}' 파일을 폴더에 넣어주세요.")
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.caption("진료 기록 어시스턴트 System")
@@ -130,20 +130,17 @@ with st.sidebar:
 
 # --- 4. 메인 화면 ---
 def main():
-    # 타이틀 섹션
     st.title("진료 기록 자동화 시스템")
     st.markdown("<p style='color: #1F4E35; font-weight: 500; margin-bottom: 30px;'>AI가 진료 대화를 분석하여 한의학 전문 S.O.A.P. 차트를 생성합니다.</p>", unsafe_allow_html=True)
     
-    # 2단 레이아웃
     col1, col2 = st.columns([1, 1], gap="large")
 
-    # [왼쪽] 녹음 및 컨트롤 영역
+    # [왼쪽] 녹음 영역
     with col1:
         st.markdown('<div class="css-card">', unsafe_allow_html=True)
         st.subheader("🎙️ 진료 녹음")
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # 녹음기
         audio_bytes = audio_recorder(
             text="", 
             recording_color="#1F4E35", 
@@ -160,7 +157,6 @@ def main():
 
         st.markdown("---", unsafe_allow_html=True)
 
-        # 변환 버튼 영역
         if audio_bytes:
             st.audio(audio_bytes, format="audio/wav")
             
@@ -170,23 +166,62 @@ def main():
                 if st.button("✨ S.O.A.P. 차트 생성하기", type="primary"):
                     with st.spinner("AI가 진료 내용을 분석하고 있습니다..."):
                         try:
-                            # 임시 파일 저장 및 AI 전송 로직 (기존과 동일)
                             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
                                 tmp_file.write(audio_bytes)
                                 tmp_file_path = tmp_file.name
+                            
                             genai.configure(api_key=api_key)
                             myfile = genai.upload_file(tmp_file_path)
                             
-                            # 프롬프트 (기존과 동일)
                             prompt = """
                             당신은 '제세현한의원' 전용 진료 차트 작성 AI입니다.
-                            ... (중략) ...
+                            녹음된 진료 대화를 분석하여 아래의 **[출력 양식]**을 엄격하게 준수하여 작성하십시오.
+                            없는 내용을 지어내지 말고, 대화에서 근거를 찾아 채우십시오.
+
+                            [출력 양식]
+
+                            S]
+                            C/C
+                            #1 [주소증1]
+                            [세부 증상 내용]
+                            
+                            #2 [주소증2]
+                            [세부 증상 내용]
+
+                            O/S
+                            #1 [시기]
+                            #2 [시기]
+
+                            MOT
+                            #1 [원인/배경]
+                            #2 [원인/배경]
+
+                            P/I
+                            #1 [관련 과거력/치료력]
+                            #2 [관련 과거력/치료력]
+
+                            ROS
+                            [항목]: [내용]
+
+                            O]
+                            (의사가 구두로 명확히 언급한 소견만 작성)
+
+                            A]
+                            (의사가 구두로 명확히 언급한 진단명만 작성)
+
+                            P]
+                            (향후 치료 계획 요약)
+
+                            ---
                             [주의] 내용은 개조식으로 작성. S 내부 항목 줄바꿈 필수.
                             """
+                            
                             model = genai.GenerativeModel("gemini-2.5-flash")
                             result = model.generate_content([myfile, prompt])
+                            
                             st.session_state['soap_result'] = result.text
                             os.remove(tmp_file_path)
+
                         except Exception as e:
                             st.error(f"오류가 발생했습니다: {e}")
         
@@ -215,4 +250,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
