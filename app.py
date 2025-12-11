@@ -21,7 +21,7 @@ st.markdown("""
         background-color: #F7F5E6;
     }
     
-    /* 상단 여백 최소화 */
+    /* 상단 여백 최적화 */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 2rem;
@@ -250,3 +250,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
