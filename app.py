@@ -15,12 +15,12 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. CSS 스타일 (버튼 글씨 흰색 강제 적용) ---
+# --- 2. CSS 스타일 (강력한 색상 지정) ---
 st.markdown("""
     <style>
     /* 전체 배경색 */
     .stApp { background-color: #F7F5E6; }
-    
+   
     /* 헤더 배경색 */
     header[data-testid="stHeader"] { background-color: #F7F5E6; }
     
@@ -38,24 +38,35 @@ st.markdown("""
         border: 1px solid #E0E8E0;
     }
     
-    /* ★★★ 버튼 스타일 (글씨 흰색 강제 적용) ★★★ */
-    .stButton > button {
+    /* ★★★ 버튼 스타일 강력 수정 (Nuclear Option) ★★★ */
+    /* 모든 버튼 요소에 대해 강제 적용 */
+    div.stButton > button {
         background-color: #1F4E35 !important; /* 배경: 진녹색 */
-        color: #FFFFFF !important;            /* 글씨: 흰색 (강제) */
-        border: none;
-        border-radius: 8px;
-        padding: 12px 24px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        width: 100%;
+        color: #FFFFFF !important;            /* 글씨: 흰색 */
+        border: 1px solid #1F4E35 !important;
+        border-radius: 8px !important;
+        padding: 12px 24px !important;
+        font-weight: 700 !important;          /* 글씨 굵게 */
     }
-    .stButton > button:hover {
-        background-color: #143323 !important;
-        color: #FFFFFF !important;            /* 호버 시에도 흰색 유지 */
-        box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-    }
-    .stButton > button:active {
+    
+    /* 버튼 안에 있는 텍스트(p태그)까지 강제 색상 지정 */
+    div.stButton > button p {
         color: #FFFFFF !important;
+    }
+
+    /* 마우스 올렸을 때 (Hover) */
+    div.stButton > button:hover {
+        background-color: #143323 !important; /* 더 진한 녹색 */
+        color: #FFFFFF !important;
+        border-color: #143323 !important;
+    }
+    
+    /* 클릭했을 때 (Active/Focus) */
+    div.stButton > button:active, 
+    div.stButton > button:focus {
+        background-color: #0F261A !important;
+        color: #FFFFFF !important;
+        box-shadow: none !important;
     }
 
     /* 텍스트박스 스타일 */
@@ -76,13 +87,11 @@ def save_to_csv(record_text):
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H:%M:%S")
     
-    # 파일이 없으면 헤더 생성
     if not os.path.exists(file_name):
         with open(file_name, mode='w', newline='', encoding='utf-8-sig') as file:
             writer = csv.writer(file)
             writer.writerow(["날짜", "시간", "차트 내용"])
     
-    # 데이터 추가
     with open(file_name, mode='a', newline='', encoding='utf-8-sig') as file:
         writer = csv.writer(file)
         writer.writerow([date_str, time_str, record_text])
@@ -144,7 +153,6 @@ def main():
                     else:
                         with st.spinner("분석 중..."):
                             try:
-                                # 임시 파일 생성 (분석 후 자동 삭제됨)
                                 with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
                                     tmp_file.write(audio_bytes)
                                     tmp_path = tmp_file.name
@@ -168,8 +176,11 @@ def main():
                                 MOT
                                 #1 [원인/동기]
                                 
+                                P/H
+                                #1 [과거력]
+
                                 P/I
-                                #1 [과거력/치료력]
+                                # [치료력]
                                 
                                 ROS
                                 [항목]: [내용]
@@ -181,14 +192,13 @@ def main():
                                 내용은 개조식으로 작성.
                                 """
                                 
-                                model = genai.GenerativeModel("gemini-1.5-flash")
+                                model = genai.GenerativeModel("gemini-2.5-flash")
                                 result = model.generate_content([myfile, prompt])
                                 
-                                # CSV 저장 (텍스트만)
                                 save_to_csv(result.text)
                                 
                                 st.session_state['soap_result'] = result.text
-                                os.remove(tmp_path) # 임시 파일 삭제 (영구 저장 안함)
+                                os.remove(tmp_path) 
                                 
                             except Exception as e:
                                 st.error(f"오류: {e}")
@@ -215,10 +225,8 @@ def main():
         file_name = "medical_records.csv"
         if os.path.exists(file_name):
             try:
-                # CSV 파일 읽기
                 df = pd.read_csv(file_name, encoding='utf-8-sig')
                 
-                # 날짜 필터링
                 selected_date = st.date_input("날짜 선택", datetime.datetime.now())
                 selected_date_str = selected_date.strftime("%Y-%m-%d")
                 
@@ -242,4 +250,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
