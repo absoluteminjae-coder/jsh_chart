@@ -7,6 +7,7 @@ from PIL import Image
 import csv
 import datetime
 import pandas as pd
+import time # 시간 대기용 라이브러리 추가
 
 # --- 1. 페이지 설정 ---
 st.set_page_config(
@@ -15,12 +16,15 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. CSS 스타일 (강력한 색상 지정) ---
+# --- 2. CSS 스타일 ---
 st.markdown("""
     <style>
     /* 전체 배경색 */
     .stApp { background-color: #F7F5E6; }
-   
+    
+    /* 상단 여백 최소화 */
+    .block-container { padding-top: 1rem !important; padding-bottom: 2rem; max_width: 1200px; }
+    
     /* 헤더 배경색 */
     header[data-testid="stHeader"] { background-color: #F7F5E6; }
     
@@ -38,35 +42,19 @@ st.markdown("""
         border: 1px solid #E0E8E0;
     }
     
-    /* ★★★ 버튼 스타일 강력 수정 (Nuclear Option) ★★★ */
-    /* 모든 버튼 요소에 대해 강제 적용 */
+    /* 버튼 스타일 (강력 적용) */
     div.stButton > button {
-        background-color: #1F4E35 !important; /* 배경: 진녹색 */
-        color: #FFFFFF !important;            /* 글씨: 흰색 */
+        background-color: #1F4E35 !important; 
+        color: #FFFFFF !important;            
         border: 1px solid #1F4E35 !important;
         border-radius: 8px !important;
         padding: 12px 24px !important;
-        font-weight: 700 !important;          /* 글씨 굵게 */
+        font-weight: 700 !important;          
     }
-    
-    /* 버튼 안에 있는 텍스트(p태그)까지 강제 색상 지정 */
-    div.stButton > button p {
-        color: #FFFFFF !important;
-    }
-
-    /* 마우스 올렸을 때 (Hover) */
+    div.stButton > button p { color: #FFFFFF !important; }
     div.stButton > button:hover {
-        background-color: #143323 !important; /* 더 진한 녹색 */
+        background-color: #143323 !important;
         color: #FFFFFF !important;
-        border-color: #143323 !important;
-    }
-    
-    /* 클릭했을 때 (Active/Focus) */
-    div.stButton > button:active, 
-    div.stButton > button:focus {
-        background-color: #0F261A !important;
-        color: #FFFFFF !important;
-        box-shadow: none !important;
     }
 
     /* 텍스트박스 스타일 */
@@ -80,7 +68,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. CSV 기록 저장 함수 (녹음 파일명 제외) ---
+# --- 3. CSV 기록 저장 함수 ---
 def save_to_csv(record_text):
     file_name = "medical_records.csv"
     now = datetime.datetime.now()
@@ -116,7 +104,7 @@ def main():
         except:
             api_key = st.text_input("Gemini API Key", type="password")
 
-        st.info("💡 차트 내용은 'medical_records.csv'에 자동 저장됩니다.\n(녹음 파일은 저장되지 않습니다)")
+        st.info("💡 긴 녹음도 문제없도록 최적화되었습니다.\n(16,000Hz 음성 전용 모드)")
 
     st.title("진료 기록 자동화 시스템")
 
@@ -131,9 +119,12 @@ def main():
             st.subheader("🎙️ 진료 녹음")
             st.markdown("<br>", unsafe_allow_html=True)
             
+            # [핵심 수정 1] sample_rate를 44100 -> 16000으로 낮춤 (용량 1/3로 감소)
             audio_bytes = audio_recorder(
                 text="", recording_color="#1F4E35", neutral_color="#8FBC8F",
-                icon_size="4x", pause_threshold=60.0, sample_rate=44100
+                icon_size="4x", 
+                pause_threshold=60.0, 
+                sample_rate=16000  # <--- 여기가 핵심 변경 포인트
             )
             
             if audio_bytes:
@@ -146,20 +137,26 @@ def main():
             if audio_bytes:
                 st.audio(audio_bytes, format="audio/wav")
                 
-                # 버튼 (CSS로 흰색 글씨 적용됨)
                 if st.button("✨ S.O.A.P. 차트 생성하기", type="primary"):
                     if not api_key:
                         st.error("API Key를 입력해주세요.")
                     else:
-                        with st.spinner("분석 중..."):
+                        with st.spinner("대용량 파일 분석 중... (시간이 조금 걸릴 수 있습니다)"):
                             try:
                                 with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
                                     tmp_file.write(audio_bytes)
                                     tmp_path = tmp_file.name
                                 
                                 genai.configure(api_key=api_key)
+                                
+                                # [핵심 수정 2] 파일 업로드 및 대기 로직 추가
                                 myfile = genai.upload_file(tmp_path)
                                 
+                                # 파일이 Google 서버에서 처리될 때까지 잠시 대기 (긴 파일 오류 방지)
+                                while myfile.state.name == "PROCESSING":
+                                    time.sleep(1)
+                                    myfile = genai.get_file(myfile.name)
+
                                 prompt = """
                                 당신은 '제세현한의원' 차트 작성 AI입니다. 
                                 진료 대화를 바탕으로 아래 양식을 엄격히 준수하여 작성하세요.
@@ -176,11 +173,8 @@ def main():
                                 MOT
                                 #1 [원인/동기]
                                 
-                                P/H
-                                #1 [과거력]
-
                                 P/I
-                                # [치료력]
+                                #1 [과거력/치료력]
                                 
                                 ROS
                                 [항목]: [내용]
@@ -192,7 +186,7 @@ def main():
                                 내용은 개조식으로 작성.
                                 """
                                 
-                                model = genai.GenerativeModel("gemini-2.5-flash")
+                                model = genai.GenerativeModel("gemini-1.5-flash")
                                 result = model.generate_content([myfile, prompt])
                                 
                                 save_to_csv(result.text)
@@ -201,7 +195,8 @@ def main():
                                 os.remove(tmp_path) 
                                 
                             except Exception as e:
-                                st.error(f"오류: {e}")
+                                st.error(f"오류가 발생했습니다: {e}")
+                                st.caption("팁: 녹음이 너무 길 경우(30분 이상), 2번에 나누어 진행해 보세요.")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
