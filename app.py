@@ -7,7 +7,7 @@ from PIL import Image
 import csv
 import datetime
 import pandas as pd
-import time # 시간 대기용 라이브러리 추가
+import time
 
 # --- 1. 페이지 설정 ---
 st.set_page_config(
@@ -19,20 +19,12 @@ st.set_page_config(
 # --- 2. CSS 스타일 ---
 st.markdown("""
     <style>
-    /* 전체 배경색 */
     .stApp { background-color: #F7F5E6; }
-    
-    /* 상단 여백 최소화 */
     .block-container { padding-top: 1rem !important; padding-bottom: 2rem; max_width: 1200px; }
-    
-    /* 헤더 배경색 */
     header[data-testid="stHeader"] { background-color: #F7F5E6; }
-    
-    /* 폰트 스타일 */
     h1, h2, h3 { font-family: 'Pretendard', sans-serif; font-weight: 700; color: #1F4E35 !important; }
     p, label, .stMarkdown { color: #333333; }
     
-    /* 카드 박스 스타일 */
     .css-card {
         background-color: #FFFFFF;
         padding: 30px;
@@ -42,7 +34,6 @@ st.markdown("""
         border: 1px solid #E0E8E0;
     }
     
-    /* 버튼 스타일 (강력 적용) */
     div.stButton > button {
         background-color: #1F4E35 !important; 
         color: #FFFFFF !important;            
@@ -57,13 +48,11 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 텍스트박스 스타일 */
     .stTextArea > div > div > textarea {
         background-color: #FFFFFF;
         border: 1px solid #C0D0C0;
     }
 
-    /* 사이드바 스타일 */
     [data-testid="stSidebar"] { background-color: #EFF2EA; border-right: 1px solid #D0D8D0; }
     </style>
     """, unsafe_allow_html=True)
@@ -110,7 +99,6 @@ def main():
 
     tab1, tab2 = st.tabs(["🎙️ 진료 녹음 및 생성", "📂 지난 기록 조회"])
 
-    # --- [탭 1] 녹음 및 차트 생성 ---
     with tab1:
         col1, col2 = st.columns([1, 1], gap="large")
 
@@ -119,12 +107,11 @@ def main():
             st.subheader("🎙️ 진료 녹음")
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # [핵심 수정 1] sample_rate를 44100 -> 16000으로 낮춤 (용량 1/3로 감소)
             audio_bytes = audio_recorder(
                 text="", recording_color="#1F4E35", neutral_color="#8FBC8F",
                 icon_size="4x", 
                 pause_threshold=60.0, 
-                sample_rate=16000  # <--- 여기가 핵심 변경 포인트
+                sample_rate=16000 
             )
             
             if audio_bytes:
@@ -149,14 +136,13 @@ def main():
                                 
                                 genai.configure(api_key=api_key)
                                 
-                                # [핵심 수정 2] 파일 업로드 및 대기 로직 추가
                                 myfile = genai.upload_file(tmp_path)
                                 
-                                # 파일이 Google 서버에서 처리될 때까지 잠시 대기 (긴 파일 오류 방지)
                                 while myfile.state.name == "PROCESSING":
                                     time.sleep(1)
                                     myfile = genai.get_file(myfile.name)
 
+                                # ★ 핵심 수정: 별표 제거 및 텍스트 깔끔하게 출력하는 규칙 추가 ★
                                 prompt = """
                                 당신은 '제세현한의원' 차트 작성 AI입니다. 
                                 진료 대화를 바탕으로 아래 양식을 엄격히 준수하여 작성하세요.
@@ -183,7 +169,10 @@ def main():
                                 A] (진단명)
                                 P] (치료 계획)
                                 ---
-                                내용은 개조식으로 작성.
+                                [작성 규칙]
+                                1. 절대 문장 앞에 별표(*)나 하이픈(-) 같은 글머리 기호를 사용하지 마세요.
+                                2. 불필요한 기호 없이, 줄바꿈과 띄어쓰기만 사용하여 깔끔한 평문(Plain Text) 느낌으로 작성하세요.
+                                3. 내용은 명사형 종결(개조식)로 간결하게 작성하세요.
                                 """
                                 
                                 model = genai.GenerativeModel("gemini-2.5-flash")
@@ -213,7 +202,6 @@ def main():
                 st.markdown("<div style='text-align:center; padding:100px 0; color:#8FBC8F;'>기록 대기 중...</div>", unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- [탭 2] 지난 기록 조회 ---
     with tab2:
         st.subheader("📂 진료 기록 대장")
         
@@ -245,5 +233,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
