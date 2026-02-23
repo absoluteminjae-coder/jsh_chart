@@ -186,7 +186,7 @@ def main():
                                 내용은 개조식으로 작성.
                                 """
                                 
-                                model = genai.GenerativeModel("gemini-1.5-flash")
+                                model = genai.GenerativeModel("gemini-1.0-flash")
                                 result = model.generate_content([myfile, prompt])
                                 
                                 save_to_csv(result.text)
@@ -245,3 +245,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
